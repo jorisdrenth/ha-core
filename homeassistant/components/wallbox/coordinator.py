@@ -313,6 +313,28 @@ class WallboxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_request_refresh()
 
     @_require_authentication
+    def _pause_charger_schedule(self, pause: bool) -> None:
+        """Set wallbox to pause or resume."""
+        try:
+            if pause:
+                self._wallbox.pauseChargingSession(self._station)
+            else:
+                self._wallbox.resumeSchedule(self._station)
+        except requests.exceptions.HTTPError as wallbox_connection_error:
+            if wallbox_connection_error.response.status_code == 429:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN, translation_key="too_many_requests"
+                ) from wallbox_connection_error
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="api_failed"
+            ) from wallbox_connection_error
+
+    async def async_pause_charger_schedule(self, pause: bool) -> None:
+        """Set wallbox to pause or resume."""
+        await self.hass.async_add_executor_job(self._pause_charger_schedule, pause)
+        await self.async_request_refresh()
+
+    @_require_authentication
     def _set_eco_smart(self, option: str) -> None:
         """Set wallbox solar charging mode."""
         try:

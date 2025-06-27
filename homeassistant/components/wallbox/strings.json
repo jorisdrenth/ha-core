@@ -96,6 +96,9 @@
     "switch": {
       "pause_resume": {
         "name": "Pause/resume"
+      },
+      "pause_resume_schedule": {
+        "name": "Pause/resume schedule"
       }
     },
     "select": {

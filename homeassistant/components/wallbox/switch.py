@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import (
     CHARGER_DATA_KEY,
     CHARGER_PAUSE_RESUME_KEY,
+    CHARGER_PAUSE_RESUME_SCHEDULE_KEY,
     CHARGER_SERIAL_NUMBER_KEY,
     CHARGER_STATUS_DESCRIPTION_KEY,
     DOMAIN,
@@ -25,6 +26,10 @@ SWITCH_TYPES: dict[str, SwitchEntityDescription] = {
         key=CHARGER_PAUSE_RESUME_KEY,
         translation_key="pause_resume",
     ),
+    CHARGER_PAUSE_RESUME_SCHEDULE_KEY: SwitchEntityDescription(
+        key=CHARGER_PAUSE_RESUME_SCHEDULE_KEY,
+        translation_key="pause_resume_schedule",
+    ),
 }
 
 
@@ -36,7 +41,10 @@ async def async_setup_entry(
     """Create wallbox sensor entities in HASS."""
     coordinator: WallboxCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        [WallboxSwitch(coordinator, SWITCH_TYPES[CHARGER_PAUSE_RESUME_KEY])]
+        [
+            WallboxSwitch(coordinator, SWITCH_TYPES[CHARGER_PAUSE_RESUME_KEY]),
+            WallboxSwitch(coordinator, SWITCH_TYPES[CHARGER_PAUSE_RESUME_SCHEDULE_KEY]),
+        ]
     )
 
 
@@ -76,6 +84,7 @@ class WallboxSwitch(WallboxEntity, SwitchEntity):
             ChargerStatus.DISCHARGING,
             ChargerStatus.WAITING_FOR_CAR,
             ChargerStatus.WAITING,
+            ChargerStatus.WAITING_IN_QUEUE_ECO_SMART,
         }
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -84,4 +93,7 @@ class WallboxSwitch(WallboxEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Resume charger."""
-        await self.coordinator.async_pause_charger(False)
+        if self.entity_description.key == CHARGER_PAUSE_RESUME_SCHEDULE_KEY:
+            await self.coordinator.async_pause_charger_schedule(False)
+        else:
+            await self.coordinator.async_pause_charger(False)
